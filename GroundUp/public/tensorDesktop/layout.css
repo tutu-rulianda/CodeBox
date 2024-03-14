@@ -1,0 +1,207 @@
+  input[type=file]::file-selector-button {
+      border: 2px solid #5589c5;
+      padding: .2em .4em;
+      border-radius: .2em;
+      background-color: #5589c5;
+      transition: 1s;
+      color: white;
+  }
+  
+  input[type=file]::file-selector-button:hover {
+      background-color: #5589c9;
+      border: 2px solid #5589c9;
+      color: white;
+  }
+  
+  #camera_recognition {
+      box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+  }
+  
+  input.apple-switch {
+      position: relative;
+      appearance: none; outline: none;
+      width: 50px; height: 30px;
+      background-color: #ffffff; border: 1px solid #D9DADC;
+      border-radius: 50px; box-shadow: inset -20px 0 0 0 #ffffff;
+      transition-duration: 200ms;
+  }
+  
+  input.apple-switch:after {
+      content: "";
+      position: absolute;
+      top: 1px; left: 1px;
+      width: 26px; height: 26px;
+      background-color: transparent;
+      border-radius: 50%; box-shadow: 2px 4px 6px rgba(0,0,0,0.2);
+  }
+  
+  input.apple-switch:checked {
+      border-color: #4ED164;
+      box-shadow: inset 20px 0 0 0 #4ED164;
+  }
+  
+  input.apple-switch:checked:after {
+      left: 20px;
+      box-shadow: -2px 4px 3px rgba(0,0,0,0.05);
+  }
+  
+  .imagery {
+      width:400px;
+      height:300px;
+      /* object-fit:scale-down; */
+      box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+  }
+  
+  li:hover a:hover {
+      background-color:#477bec;
+      color:white;
+      display:inline-block;
+  }
+  
+  video {
+      width: 400px;
+      height: 300px;
+      /* object-fit:scale-down; */
+      box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+  }
+  
+  canvas {
+      width: 400x;
+      height: 300px;      
+      /* object-fit:scale-down; */
+      box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+  }
+  
+  h4 {
+      font-size: 22px;
+  }
+  
+  h1 {
+      font-size: 36px;
+      font-weight: 800;
+  } 
+
+  .img {
+      width: 100px;
+      height: 100px;
+      object-fit: scale-down;
+      box-shadow: 4.0px 8.0px 8.0px rgba(0, 0, 0, 0.38);
+  }
+  
+  input[type=file]::file-selector-button {
+      border: 2px solid #5589c5;
+      padding: .2em .4em;
+      border-radius: .2em;
+      background-color: #5589c5;
+      transition: 1s;
+      color: white;
+  }
+  
+  input[type=file]::file-selector-button:hover {
+      background-color: #5589c9;
+      border: 2px solid #5589c9;
+      color: white;
+  }
+  
+  #camera_recognition {
+      box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+  }
+  
+  h4 {
+      font-size: 22px;
+  }
+  
+  br {
+      display: block;
+      margin: 9px 0;
+      line-height: 9px;
+      content: " ";
+  }
+  
+  p:hover {
+      cursor: pointer;
+  }
+  
+  a:hover {
+      text-decoration: none;
+  }
+  
+  .center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
+  }
+  
+  .button-shadow {
+      box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+  }
+
+  .centralize-div {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    overflow-y: hidden;
+  }
+
+  body{
+    position:absolute;
+    background-color: rgba(0,0,0,0);
+    top:0;
+    margin:0;
+    padding:0;
+    width:100vw;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    overflow-x:hidden;
+    overflow-y: hidden;
+}
+.centered {
+    height: 50px;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+}
+.centered2 {
+    height: 50px;
+    left: 48%;
+    position: absolute;
+    top: 52px;
+    transform: translate(-50%, -50%);
+    width: 400px;
+}
+.centered3 {
+    height: 50px;
+    left: 49%;
+    position: absolute;
+    top: 320px;
+    transform: translate(-50%, -50%);
+    width: 400px;
+}
+.centered4 {
+    height: 50px;
+    left: 49%;
+    position: absolute;
+    top: 320px;
+    transform: translate(-50%, -50%);
+    width: 80px;
+}
+.centered5 {
+    height: 50px;
+    left: 61%;
+    position: absolute;
+    top: 388px;
+    transform: translate(-50%, -50%);
+    width: 400px;
+}            
+img.displayed {
+    display: block;
+    margin-left: auto;
+    margin-right: auto; 
+}

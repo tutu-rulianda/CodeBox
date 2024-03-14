@@ -1,0 +1,386 @@
+<!--
+Copyright © 2024 Tutu Rulianda
+The MIT License (MIT)
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
+documentation files (the “Software”), to deal in the Software without restriction, including without limitation 
+the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, 
+and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions 
+of the Software.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED 
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+DEALINGS IN THE SOFTWARE.
+-->
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8" />
+        <title>Tutu Rulianda | CodeBox - 2D Liveness Detection</title>
+        <meta content="Web application portal for accomodating face biometrics administration based on the open source CompreFace frameworks and libraries." name="description" />
+        <meta content="CodeBox" name="Tutu Rulianda" />
+        <meta name="format-detection" content="telephone=no">
+        <meta name="msapplication-tap-highlight" content="no">
+        <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">    
+        <!-- app favicon -->
+        <link rel="shortcut icon" href="favicon.ico">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.min.js" integrity="sha512-WW8/jxkELe2CAiE4LvQfwm1rajOS8PHasCCx+knHG0gBHt8EXxS6T6tJRTGuDQVnluuAvMxWF4j8SNFDKceLFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="tensorMobile/circular-images.css">        
+        <link rel="stylesheet" href="tensorMobile/layout.css"/>
+        <!-- Require the peer dependencies of facemesh. -->
+        <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@2.6.0/dist/tf-core.min.js"></script> -->
+        <script src="tensorMobile/tf-core.min.js"></script>
+        <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@2.6.0/dist/tf-converter.min.js"></script> -->
+        <script src="tensorMobile/tf-converter.min.js"></script>
+        <!-- You must explicitly require a TF.js backend if you're not using the tfs union bundle. -->
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@2.6.0/dist/tf-backend-wasm.min.js"></script>
+        <!-- Pretrained facemesh model. -->
+        <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@0.0.2/dist/face-landmarks-detection.min.js"></script> -->
+        <script src="tensorMobile/face-landmarks-detection.min.js"></script>
+        <!-- https://medium.com/swlh/how-to-access-webcam-and-take-picture-with-javascript-b9116a983d78 -->
+        <script src="tensorMobile/webcam-easy.min.js"></script>
+    </head>
+    <body>
+        <div id="customDiv11" style="width:100%;position:absolute;top:-50px;">
+            <div id="video-container" class="container centered">
+                <div class="column" class="container centered">
+                <div class="circular--landscape">
+                    <div id="show-video" class="circular--lansdcape">
+                        <video poster="poster.png" style="display:block;width:350px;height:600px;position:absolute;top:-200px;left:-50px;z-index:2000;" id="webcam" autoplay playsinline></video>
+                        <canvas style="display:none;width:350px;height:600px;position:absolute;top:-200px;left:-50px;z-index:-1;" id="canvas" class="d-none"></canvas>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div>
+                <p id="pngplay" style="display:none;position:absolute;top:70px;z-index:100;">Images Pack By PNGplay</p>
+            </div>
+            <div class="centered2">
+                <img id="face-processing" style="display:none;z-index:120;" src="images/face-processing.gif" width="400px" height="266px">
+            </div>                        
+            <div class="centered2">
+                <img id="auth-accepted" style="display:none;z-index:121;" src="images/round-accepted-stamp-png.png" width="400px" height="267px">
+            </div>
+            <div class="centered2">
+                <img id="auth-denied" style="display:none;z-index:122;" src="images/Denied-Logo-PNG.png" width="400px" height="267px">
+            </div>
+        </div>
+        <div class="centered3">            
+            <button style="z-index:1233;display:block;width:200px;" id="start-capture" class="btn shadowBoxing centered"><i class="fa fa-camera fa-2x fa-fw"></i> Tap To <strong>Verify.</strong></button>
+            <button style="z-index:1231;display:none;width:200px;" id="capture-running" class="btn shadowBoxing centered"><i class="fa fa-refresh fa-spin fa-2x fa-fw"></i> Processing.</button>
+        </div>
+        <div class="centered4" style="z-index:103;" id="spinner-container">
+            <img style="display:none;" id="spinner" src="circles-menu.gif" width="80px" height="auto" />
+        </div>            
+        <div class="centered5" style="z-index:104;display:block;" id="info-text"></div>
+
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/mobile-detect/1.4.5/mobile-detect.min.js" defer></script>
+        <script>
+            window.addEventListener("load", () => {
+                var currentURL = window.location.href;
+                var md = new MobileDetect(window.navigator.userAgent);
+                if ((md.mobile() == null) && (md.phone() == null) && ((currentURL.includes("ghost") == false) || (currentURL.includes("settings") == false) || (currentURL.includes("dashboard") == false))) {
+                    // window.location.replace('https://codebox.tuturulianda.com');
+                    document.getElementById("webcam").style.width = "400px;";
+                    document.getElementById("webcam").style.width = "300px;";
+                    document.getElementById("canvas").style.width = "400px;";
+                    document.getElementById("canvas").style.width = "300px;";
+                    document.getElementById("pngplay").style.top = "70px;";
+                    document.getElementById("face-processing").style.width = "400px;";
+                    document.getElementById("auth-accepted").style.width = "400px;";
+                    document.getElementById("auth-denied").style.width = "400px;";
+                    document.getElementById("face-processing").style.height = "266px;";
+                    document.getElementById("auth-accepted").style.height = "267px;";
+                    document.getElementById("auth-denied").style.height = "267px;";
+                    document.getElementById("start-capture").style.width = "200px;";
+                    document.getElementById("capture-running").style.width = "200px;";
+                    document.getElementById("spinner").style.width = "80px;";
+                }
+            });
+        </script> -->
+
+        <script type="text/javascript">
+
+            const webcamElement = document.getElementById('webcam');
+            const canvasElement = document.getElementById('canvas');
+            const webcam = new Webcam(webcamElement, 'user', canvasElement);
+
+            let model = null;
+            let cameraFrame = null;
+            let running = false
+            let timeout = null;
+            let nProcess = 0;
+
+            $("#show-video").hide();
+
+            $("#start-capture").click(function () {
+                startCaptura();
+            });
+
+            webcam.start()
+                .then(result => {
+                    document.getElementById("show-video").style.display = "block";
+                    $("#show-video").show();
+                    console.log("webcam started");
+                })
+                .catch(err => {
+                    console.log(err);
+                });            
+
+            async function stopCaptura() {
+                if (running) {
+                    $("#info-text").text('');
+                    $("#capture-running").hide();
+                    $("#start-capture").show();
+                    document.getElementById("spinner").style.display = "none";
+                    running = false;
+                    nProcess = 0;
+                    document.getElementById("pngplay").style.display = "none";
+                    if (cameraFrame!= null) {
+                        cancelAnimationFrame(cameraFrame);
+                    }
+                }
+            }
+
+            async function startCaptura() {
+                $("#start-capture").hide();
+                $("#show-video").show();
+                $("#info-text").text('');
+                document.getElementById("spinner").style.display = "block";
+                nProcess = 0;
+                
+                // Load the MediaPipe Facemesh package.                
+                faceLandmarksDetection.load(
+                    faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
+                    {maxFaces: 1}
+                ).then(mdl => {
+                    document.getElementById("spinner").style.display = "none";
+                    $("#show-video").show();
+                    $("#capture-running").show();
+                    $('#info-text').text('Please, wink toward the camera.');
+                    
+                    model = mdl;
+                    nProcess = 0;
+                    cameraFrame = detectKeyPoints();
+                    timeout = setTimeout(() => {
+                        stopCaptura();
+                    }, 5000);
+                    running = true;
+                    document.getElementById("pngplay").style.display = "none";
+                }).catch(err => {
+                    console.log(err);
+                    stopCaptura();
+                });
+            }
+
+            async function main() {
+                await setupFaceLandmarkDetection()
+            }
+
+            async function setupFaceLandmarkDetection() {
+                // Setup TF Backend type
+                await tf.setBackend('wasm');
+                
+            }
+
+            async function detectaPiscada(keypoints) {
+                return true;
+            }
+
+            async function detectKeyPoints() {
+                // Pass in a video stream (or an image, canvas, or 3D tensor) to obtain an
+                // array of detected faces from the MediaPipe graph. If passing in a video
+                // stream, a single prediction per frame will be returned.
+
+                const predictions = await model.estimateFaces({
+                    input: document.querySelector("video"),
+                    returnTensors: false,
+                    flipHorizontal: true,
+                    predictIrises: true
+                });
+
+                if (predictions.length > 0) {
+                    // Somente 1 face
+                    const keypoints = predictions[0].scaledMesh;
+                    if (detectarPiscada(keypoints)) {
+                        // console.log('-----> Blinked');
+                        clearTimeout(timeout);
+                        stopCaptura();
+
+                        if (document.getElementById("spinner").style.display == "block") {
+                            document.getElementById("spinner").style.display = "none";
+                            clearTimeout(timeout);
+                            stopCaptura();                            
+                            return null;
+                        }
+
+                        let picture = webcam.snap();
+                        // document.querySelector('#download-photo').href = picture;
+                        nProcess = nProcess + 1;
+                        picData = picture.replace('data:image/png;base64,', '');
+                        webcamRecognizeImage(nProcess, picData);
+                        return null;                        
+                    }
+                }
+                cameraFrame = requestAnimationFrame(detectKeyPoints);
+            }
+
+            function detectarPiscada(keypoints) {
+
+                    leftEye_l = 263
+                    leftEye_r = 362
+                    leftEye_t = 386
+                    leftEye_b = 374
+
+                    rightEye_l = 133
+                    rightEye_r = 33
+                    rightEye_t = 159
+                    rightEye_b = 145
+
+                    aL = euclidean_dist(keypoints[leftEye_t][0], keypoints[leftEye_t][1], keypoints[leftEye_b][0], keypoints[leftEye_b][1]);
+                    bL = euclidean_dist(keypoints[leftEye_l][0], keypoints[leftEye_l][1], keypoints[leftEye_r][0], keypoints[leftEye_r][1]);
+                    earLeft = aL / (2 * bL);
+
+                    aR = euclidean_dist(keypoints[rightEye_t][0], keypoints[rightEye_t][1], keypoints[rightEye_b][0], keypoints[rightEye_b][1]);
+                    bR = euclidean_dist(keypoints[rightEye_l][0], keypoints[rightEye_l][1], keypoints[rightEye_r][0], keypoints[rightEye_r][1]);
+                    earRight = aR / (2 * bR);
+
+                    // console.log('-----> ' + earLeft + '\t' + earRight);
+
+                    if ((earLeft < 0.080) || (earRight < 0.080)) {
+                        nProcess = nProcess + 1;
+                        return true;
+                    } 
+                    else {
+                        nProcess = 0;
+                        return false;
+                    }
+
+            }
+
+            function euclidean_dist (x1, y1, x2, y2) {
+                return Math.sqrt( Math.pow((x1-x2), 2) + Math.pow((y1-y2), 2) );
+            };         
+
+            main();
+
+        </script>
+
+        <script type="text/javascript">
+            function webcamRecognizeImage(nProcess, picData) {
+                $("#start-capture").hide();
+                const nAuth = nProcess;
+                const ret = "";
+                if (nAuth == 0) {
+                    swal("Something was wrong. Please, try again.");
+                    return true;
+                }
+                document.getElementById("spinner").style.display = "block";
+                $(document).ajaxStop(function(){
+                });
+                var result = null;
+                var settings = {
+                    "url": "https://vault.tuturulianda.com/api/v1/recognition/recognize?limit=0&det_prob_threshold=0.9&prediction_count=1&face_plugins=similarity,subject&status=false&detect_face=true",
+                     "method": "POST",
+                    "timeout": 0,
+                    "headers": {
+                      "Content-Type": "application/json",
+                      "x-api-key": "c86b70e0-ba3c-44f3-823e-dd848b02ad24"
+                    },
+                    "data": JSON.stringify({
+                      "file": picData
+                    }),
+                };
+
+                $.ajax(settings).done(function (result) {               
+                    data = JSON.stringify(result);
+                    // console.log(data);
+                    const jsonData = JSON.parse(data);
+                    const subject = jsonData.result[0].subjects[0].subject;
+                    const similarity = jsonData.result[0].subjects[0].similarity;
+                    const isEmpty = jsonData.result[0].subjects.length === 0;
+                    if (isEmpty) {
+                        ret = "";
+                        let sHTML = '<div><label id="input-blank" style="z-index:200;background-color:rgb(0,0,0,1);color:white;position:fixed;font-size:12px;font-weight:500;left:0px;bottom:-45px;width:600px;line-height:32px;height:100px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Enter your name below.</label><input type="text" id="subjectName" value="" style="z-index:201;outline:none;border:none;background-color:black;color:white;position:fixed;font-size:24px;font-weight:700;left:-200px;margin-left:227px;bottom:5px;width:1400px;line-height:32px;"></div><div><a href="#" onclick="register()"><img src="flaticon/cross.png" width="48px" height="48px" style="z-index:202;position:fixed;bottom:13px;right:68px;" /></a></div><div><a href="#" id="clickHref" onclick="alertus()"><img src="flaticon/tick.png" width="44px" height="44px" style="z-index:252;position:fixed;bottom:15px;right:20px;" /></div></a><div><a href="#" onclick="resetBack()"><img src="flaticon/left.png" width="44px" height="44px" style="z-index:202;position:fixed;top:20px;left:20px;border-radius:10px;color:rgb(0,0,0,0.6);" /></a></div>';
+                        // document.getElementById("message-bubble").innerHTML = "Position your head to fill up the whole screen after entering your name below.";
+                        // document.getElementById("message-bubble").style.display = "block";
+                        document.getElementById("match").innerHTML = "Please register your face first.";
+                        document.getElementById("match").style.display = "block";
+                        document.getElementById("start-button").style.display = "none";
+                        document.getElementById("spinner").style.display = "none";
+                        document.getElementById("spinner").style.display = "none";
+                        document.getElementById("webcam").style.display = "none";
+                        document.getElementById("canvas").style.display = "none";
+                        pleaseWait(5);
+                        window.location.reload();
+                        result = '';
+                        return true;
+                    }
+                    else {
+                        if (similarity.toFixed(2) >= 0.95) {
+                            $('#info-text').text('');
+                            document.getElementById("face-processing").style.display = "block";
+                            pleaseWait(100);
+                            document.getElementById("spinner").style.display = "none";
+                            document.getElementById("webcam").style.display = "none";
+                            document.getElementById("canvas").style.display = "none";
+                            // document.getElementById("auth-accepted").style.display = "block";
+                            // document.getElementById("pngplay").style.display = "block";
+                            // pleaseWait(10000);
+                            window.location = "https://tuturulianda.com";
+                            result = '';
+                            return false;
+                        }
+                        else {
+                            $('#info-text').text('');
+                            // document.getElementById("face-processing").style.display = "block";
+                            // pleaseWait(15);
+                            document.getElementById("auth-denied").style.display = "block";
+                            // document.getElementById("pngplay").style.display = "block";
+                            pleaseWait(100);
+                            document.getElementById("spinner").style.display = "none";
+                            document.getElementById("webcam").style.display = "none";
+                            document.getElementById("canvas").style.display = "none";
+                            window.location.reload();
+                            result = '';
+                            return true;
+                        }
+                    }
+                })
+                .fail(function(result){
+                    data = JSON.stringify(result);
+                    // console.log("Failed: ", data);
+                    // ret = 'No face is found in the given image.';
+                    ret = data;
+                    $('#info-text').text(ret);
+                    document.getElementById("spinner").style.display = "none";
+                    document.getElementById("webcam").style.display = "none";
+                    document.getElementById("canvas").style.display = "none";
+                    document.getElementById("auth-denied").style.display = "none";
+                    document.getElementById("pngplay").style.display = "none";
+                });
+                return true;
+            }
+        </script>
+
+        <script type="text/javascript">
+            async function pleaseWait(n) {
+                const sleepNow = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+                async function repeatedGreetingsLoop() {
+                    for (let i = 1; i <= n; i++) {
+                        await sleepNow(n);
+                        console.log(`Wait iteration #${i}`);
+                    }
+                }
+                repeatedGreetingsLoop();
+            }        
+        </script>
+
+    </body>
+</html>

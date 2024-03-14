@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="face-api.js"></script>
+  <script src="js/faceDetectionControls.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.css">
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+  <style>
+        body{
+            position:absolute;
+            top:0;
+            margin:0;
+            padding:0;
+            width:100vw;
+            height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            flex-direction:column;
+            overflow-y: hidden;
+            overflow-y: hidden;
+        }
+        canvas {
+            position:absolute;
+            width:300px;
+            height:400px;            
+            z-index:10;
+            border-radius: 15px;
+            box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+        }
+        video {
+            z-index:9;
+            width:300px;
+            height:400px;            
+            border-radius: 15px;
+            box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+        }
+        .loading {
+            z-index:-10;
+            position:absolute;
+            top:-10px;
+            justify-content:center;
+            align-items:center;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            height: 100vh;
+        }
+        .loading>img {
+            animation: rotation 2s infinite linear;
+        }
+  </style>  
+</head>
+<body>
+    <div style="position: relative" class="margin">
+      <video poster="https://probe2.tuturulianda.com/poster.png" onloadedmetadata="onPlay(this)" id="inputVideo" autoplay muted playsinline></video>
+      <canvas id="overlay" />
+    </div>
+    <div class="loading"><img id="spinner" src="icons8-spinning-circle-transparent.gif" width="80" height="80"/></div>
+</body>
+
+  <script>
+    let forwardTimes = []
+    let withBoxes = true
+
+    function onChangeHideBoundingBoxes(e) {
+      withBoxes = !$(e.target).prop('checked')
+    }
+
+    function updateTimeStats(timeInMs) {
+      forwardTimes = [timeInMs].concat(forwardTimes).slice(0, 30)
+      const avgTimeInMs = forwardTimes.reduce((total, t) => total + t) / forwardTimes.length
+      $('#time').val(`${Math.round(avgTimeInMs)} ms`)
+      $('#fps').val(`${faceapi.utils.round(1000 / avgTimeInMs)}`)
+    }
+
+    async function onPlay() {
+      const videoEl = $('#inputVideo').get(0)
+
+      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
+        return setTimeout(() => onPlay())
+
+
+      const options = getFaceDetectorOptions()
+
+      const ts = Date.now()
+
+      const result = await faceapi.detectSingleFace(videoEl, options).withFaceExpressions()
+
+      updateTimeStats(Date.now() - ts)
+
+      if (result) {
+        const canvas = $('#overlay').get(0)
+        const dims = faceapi.matchDimensions(canvas, videoEl, true)
+
+        const resizedResult = faceapi.resizeResults(result, dims)
+        const minConfidence = 0.05
+        if (withBoxes) {
+          faceapi.draw.drawDetections(canvas, resizedResult)
+        }
+        faceapi.draw.drawFaceExpressions(canvas, resizedResult, minConfidence)
+      }
+
+      setTimeout(() => onPlay())
+    }
+
+    async function run() {
+      // load face detection and face expression recognition models
+      await changeFaceDetector(TINY_FACE_DETECTOR)
+      await faceapi.loadFaceExpressionModel('/')
+      changeInputSize(224)
+
+      // try to access users webcam and stream the images
+      // to the video element
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} })
+      const videoEl = $('#inputVideo').get(0)
+      videoEl.srcObject = stream
+      $('#spinner').hide()
+    }
+
+    function updateResults() {}
+
+    $(document).ready(function() {
+      run()
+    })
+  </script>
+</body>
+</html>

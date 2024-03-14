@@ -1,0 +1,881 @@
+<!--
+Copyright © 2023 Tutu Rulianda
+The MIT License (MIT)
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
+documentation files (the “Software”), to deal in the Software without restriction, including without limitation 
+the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, 
+and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions 
+of the Software.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED 
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+DEALINGS IN THE SOFTWARE.
+-->
+<!-- 
+The portion of head pose estimation is based on the work of the developer Alamgir Hossen 
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Tutu Rulianda | CodeBox 3D Liveness Detection</title>
+        <meta content="Web application portal for accomodating face biometrics administration based on the open source CompreFace frameworks and libraries." name="description" />
+        <meta content="CodeBox" name="Tutu Rulianda" />
+        <meta name="format-detection" content="telephone=no">
+        <meta name="msapplication-tap-highlight" content="no">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1, maximum-scale=1, user-scalable=no" />
+        <link rel="shortcut icon" href="favicon.ico">        
+        <script src="js/tf.min.js"></script>
+        <script src="js/posenet.min.js"></script>
+        <script src="src/js/jquery-3.7.1.min.js"></script>
+        <script src="js/popper.min.js"></script>
+        <script src="js/obniz.js" crossorigin="anonymous"></script>
+        <script src="js/Stats.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="css/speech-bubble.css" />
+        <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="src/css/style.css">
+        <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
+    </head>
+    <body>
+        <div class="loading">
+            <img id="spinner" height="80" width="80" src="icons8-spinning-circle-transparent.gif" alt="Loading...">
+        </div>
+        <div class="container" style="position:absolute; width:440px; left:50px;">
+            <!-- <div class="row">
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-4" style="background-color:black;color:red;">
+                            <h4 id="data_show_roll" style="display:block;z-index:9998;position:fixed;top:0px;left:10px;width:170px;font-size:12px;"></h4>
+                        </div>
+                        <div class="col-md-4" style="background-color:black;color:red;">
+                            <h4 id="data_show_pitch" style="display:block;z-index:9999;position:fixed;top:0px;left:150px;width:170px;font-size:12px;"></h4>
+                        </div>
+                        <div class="col-md-4" style="background-color:black;color:red;">
+                            <h4 id="data_show_yaw" style="display:block;z-index:9999;position:fixed;top:0px;left:300px;width:170px;font-size:12px;"></h4>
+                        </div>
+                    </div>
+                </div>
+            </div> -->
+            <h1 style="display: none;">Tutu Rulianda | CodeBox</h1>
+            <div id="canvas-wrap" class="canvas-wrapper">
+                <canvas id="canvid" class="canvas" width="440" height="740" style="position: absolute; left: -80px; z-index:-1;"></canvas>
+                <canvas id="canvas" class="canvas" width="440" height="740" style="display: none; position: absolute; left: -80px; z-index:0;"></canvas>
+                <video id="video" poster="poster.png" class="canvas" width="440" height="740" style="position: absolute; pointer-events: none; position: absolute; left: -80px; z-index:0;" playsinline autoplay></video>
+                <div id="displacement" class="displacement"></div>
+            </div>
+            <div class="result-wrap">
+                <div id="message-bubble-container" style="z-index:200;display:block;"><p id="message-bubble" style="z-index:200;display:none;position:fixed;top:70px;width:300px;font-size:12px;font-weight:500;color:white;line-height:16px;/* 4px +12px + 4px */"></p></div>
+                <div id="position-status" class="speech top" style="position:fixed;left:25%;right:20%; z-index:300;display:none;width:200px;bottom:1%;"></div>
+                <div id="match" style="z-index:300;background-color:black;color:white;position:fixed;bottom:-10px;height:64px;left:0px;width:100%;line-height:36px;font-size:18px;font-weight:500;display:none;"></div>                
+                <button id="first-timer" onclick="register()" class="btn btn-success" style="display:none;z-index:20;line-height:36px;position:fixed;bottom:60px;width:100%;font-size:18px;font-weight:500;border-radius:0px;">Add another image? Tap here.</button>                
+                <button id="start-button" onclick="startProcess()" class="btn btn-primary" style="z-index:10;display:block;position:absolute;left:7%;right:7%;bottom:12px;line-height:36px;width:200px;font-size:18px;font-weight:500;border-radius:10px;">Start</button>
+            </div>
+        </div>
+        <script src="src/js/jquery-3.7.1.min.js"></script>
+        <script src="js/popper.min.js"></script>
+        <script src="src/js/jeelizFaceTransfer.js"></script>
+        <script src="src/js/jeelizFaceFilter.js"></script>
+        <script src="src/js/emotion.js"></script>
+        <script src="src/js/webrtc.js"></script>
+        <script src="src/js/face.js"></script>
+        <script src="src/js/ai-flip.js" defer></script>
+        <script src="src/js/html2canvas.js" defer></script>
+        <script>
+            window.scrollTo(0,document.body.scrollHeight);
+            $(".airesult").hide();
+            function cancel_snapshot() {
+                const videoElm = document.querySelector('video');
+                capture('user');
+                nextFrame();
+                requestAnimationFrame(nextFrame);
+                html2canvas(document.getElementById("canvas-wrap")).then(function (canvas) {
+                    $(".airesult").hide().attr("src", "").css("z-index", "0");
+                    $(".btn-download").hide();
+                    $(".btn-save, #canvas-wrap").show();
+                    $(".btn-cam").css("opacity", "1");
+                    $(".btn-cancel").css("visibility", "hidden");
+                    $("#canvas-wrap").removeClass("canvas-wrapper-result");
+                });
+            }
+            function take_snapshot() {
+          
+                clone_video();
+                
+                html2canvas(document.getElementById("canvas-wrap")).then(function (canvas) {
+                    var generatedImage = canvas.toDataURL("image/jpeg", 1.0);
+                    $(".airesult").show().attr("src", generatedImage).css("z-index", "2");
+                    $(".btn-download").show().attr("href", generatedImage).attr("download", "happyresult.jpeg");
+                    $(".btn-save, #canvas-wrap").hide();
+                    $(".btn-cam").css("opacity", "0");
+                    $(".btn-cancel").css("visibility", "visible");
+                    $("#canvas-wrap").addClass("canvas-wrapper-result");
+                });
+            }
+            $(".btn-cam,.btn-cancel").click(function(e) {
+                $("#btn-front").toggle();
+                $("#btn-back").toggle();
+                e.preventDefault();
+            });
+        </script>
+        <script>
+            const imageScaleFactor = 0.2;
+            const outputStride = 16;
+            const flipHorizontal = false;
+            const stats = new Stats();
+            const canvas = document.getElementById('canvas');
+            const contentWidth = canvas.width;
+            const contentHeight = canvas.height;
+            const fontLayout = "bold 20px Arial";
+            const fontPoint = "bold 15px Arial";
+            var bFirst = true;
+            var beginProcess = true;
+            var moveHeadToLeft = false;
+            var moveHeadToRight = false;
+            var moveHeadToCenter = false;
+            var moveHeadToUpward = false;
+            var moveHeadToDownward = false;
+
+            var score = 0;
+            var mypose = new Object();
+            var myposition = new Object();
+            myposition.yaw = 0;
+            myposition.pitch = 0;
+            myposition.roll = 0;
+            var cvw = canvas.width;
+            var cvh = canvas.height;
+            var canvasData = "";
+            var ang_view = {//angle of view of webcam. for mode 3
+                // x: 90, y: 60, z:90
+                x: 60, y: 60, z:60
+            };
+            var model, smile_model, ctxCanvas, videoWidth, videoHeight;
+            videoWidth = video.width;
+            videoHeight = video.height;
+            var startTime, endTime;
+            var bTimeOut = false;
+
+            function start() {
+                startTime = performance.now();
+            };
+
+            function end() {
+                endTime = performance.now();
+                var timeDiff = endTime - startTime; //in ms
+                // strip the ms
+                timeDiff /= 1000;
+
+                // get seconds
+                var seconds = Math.round(timeDiff);
+                // console.log(seconds + " seconds");
+                return seconds;
+            }
+
+            document.getElementById("spinner").style.display = "block";
+
+            async function bindPage() {
+                start();
+                const net = await posenet.load();
+                let video;
+                try {
+                    video = await loadVideo();
+                }
+                catch (e) {
+                    //console.error(e);
+                    document.getElementById("spinner").style.display = "none";
+                    return;
+                }
+                detectPoseInRealTime(video, net);
+            }
+
+            async function loadVideo() {
+                const video = await setupCamera();
+                video.play();
+                document.getElementById("spinner").style.display = "none";
+                return video;
+            }
+
+            async function setupCamera() {
+                const video = document.getElementById('video');
+                const state = {
+                    backend: 'webgl'
+                };
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        'audio': false,
+                        // 'video': { width: contentWidth, height: contentHeight, facingMode: 'user' }
+                        'video': { facingMode: 'user' }
+                    });
+                    video.srcObject = stream;
+                    return new Promise(resolve => {
+                        video.onloadedmetadata = () => {
+                            resolve(video);
+                        };
+                    });
+                }
+                else {
+                    const errorMessage = "This browser does not support video capture, or this device does not have a camera";
+                    swal(errorMessage);
+                    return Promise.reject(errorMessage);
+                }
+            }
+
+            function detectPoseInRealTime(video, net) {
+                const ctx = canvas.getContext('2d');
+                const flipHorizontal = true;
+
+                async function poseDetectionFrame() {
+                    if (detect_pose == false) { 
+                        return; 
+                    }
+                    stats.begin();
+                    let poses = [];
+                    bFirst = true;
+                    const pose = await net.estimateSinglePose(video, imageScaleFactor, flipHorizontal, outputStride);
+                    poses.push(pose);
+                    ctx.clearRect(0, 0, contentWidth, contentHeight);
+                    ctx.save();
+                    ctx.scale(-1, 1);
+                    ctx.translate(-contentWidth, 0);
+                    ctx.drawImage(video, 0, 0, contentWidth, contentHeight);
+                    ctx.restore();
+                    ctx.font = fontLayout;
+                    drawPoints(poses, ctx);
+                    if (moveHeadToCenter && bFirst) {
+                        document.getElementById("spinner").style.display = "block";
+                        document.getElementById("position-status").innerHTML = "";
+                        document.getElementById("position-status").style.display = "none";
+                        var data = canvas.toDataURL("image/png");
+                        var img = new Image;
+                        img.onload = resizeImage;
+                        img.src = data;
+                        function resizeImage() {
+                            var targetWidth = 300;
+                            var targetHeight = 400;
+                            var picData = imageToDataUri(img, targetWidth, targetHeight);
+                            var picLoadedData = picData.replace("data:image/png;base64,", "");
+                            if (bFirst) {
+                                bFirst = false;
+                                document.getElementById("spinner").style.display = "block";
+                                webcamRecognizeImage(picLoadedData);
+                            }
+                        }
+                        return;
+                    }
+                    stats.end();
+                    requestAnimationFrame(poseDetectionFrame);
+                    // tf.engine().endScope();
+                }
+                poseDetectionFrame();
+            }
+
+
+            function getPart(partname, pose) {
+                return pose["keypoints"].filter(function (partpoint) {
+                    if (partpoint.part == partname) {
+                        return true;
+                    }
+                });
+            }
+
+            function drawPoints(poses, ctx) {
+                poses.forEach(({ s, keypoints }) => {
+                    keypoints.forEach((partpoint) => {
+                        // drawPoint(partpoint, ctx);
+                        // drawPointName(partpoint, ctx);
+                    });
+                });
+                var nose = getPart("nose", poses[0])[0];
+                var eye_l = getPart("leftEye", poses[0])[0];
+                var eye_r = getPart("rightEye", poses[0])[0];
+                var ear_l = getPart("leftEar", poses[0])[0];
+                var ear_r = getPart("rightEar", poses[0])[0];
+                var n = nose.position;
+                var l = eye_r.position;
+                var r = eye_l.position;
+                var p_ear_l = ear_l.position;
+                var p_ear_r = ear_r.position;
+
+                var elapsedTime = end();
+                if (elapsedTime >= 300) {
+                   bTimeOut = true;
+                }
+
+                if (bTimeOut) {
+                   swal("Session time out.");
+                   window.location.reload();
+                   return;
+                }
+
+                var score = poses[0]["score"];
+                var score_nose = nose.score;
+                var score_face = (nose.score + eye_l.score + eye_r.score + ear_l.score + ear_r.score) / 5;
+                _mypose_yaw = Math.atan2(2 * n.x - l.x - r.x, r.x - l.x);
+                var ear_y = (p_ear_l.y + p_ear_r.y) / 2;
+
+                var f2 = (ear_l.score + ear_r.score) / 2.0;
+
+                if (!moveHeadToRight) { 
+                    if ((ear_l.score.toFixed(2) >= 0.95) && (ear_r.score.toFixed(2) <= 0.09) && (myposition.roll.toFixed(2) >= 500.0)) {
+                        moveHeadToRight = true;
+                        document.getElementById("position-status").style.display = "block";
+                        document.getElementById("position-status").innerHTML = "Right Aligned."
+                    }
+                }
+
+                if (!moveHeadToLeft) {  
+                    if ((ear_l.score.toFixed(2) <= 0.09) && (ear_r.score.toFixed(2) >= 0.95) && (myposition.roll.toFixed(2) <= -300.0)) {
+                        moveHeadToLeft = true;
+                        document.getElementById("position-status").style.display = "block";
+                        document.getElementById("position-status").innerHTML = "Left Aligned.";
+                    }
+                }
+
+                if (!moveHeadToDownward) {
+                    if ((myposition.pitch.toFixed(2) > 0) && (myposition.pitch.toFixed(2) <= 105.0)) {
+                        moveHeadToDownward = true;
+                        document.getElementById("position-status").style.display = "block";
+                        document.getElementById("position-status").innerHTML = "Downward Aligned.";
+                    }                    
+                }
+
+                if (!moveHeadToUpward) {
+                    if ((myposition.pitch.toFixed(2) >= 128.0)) {
+                        moveHeadToUpward = true;
+                        document.getElementById("position-status").style.display = "block";
+                        document.getElementById("position-status").innerHTML = "Upward Aligned.";
+                    }
+                }
+
+                if (moveHeadToLeft && moveHeadToRight && moveHeadToUpward && moveHeadToDownward) {
+                    var f2 = (ear_l.score + ear_r.score) / 2.0;
+                    document.getElementById("position-status").display = "block";
+                    document.getElementById("position-status").innerHTML = "Position Your Head Straight to The Camera."
+                    if ((f2 >= 0.9) && (score_face >= 0.85) && (score_face <= 1.0)) {
+                        document.getElementById("spinner").style.display = "none";
+                        document.getElementById("position-status").style.display = "block";                        
+                        moveHeadToCenter = true;
+                        document.getElementById("position-status").style.display = "block";
+                    }
+                }
+                    
+                myposition.yaw = (120 - Math.atan((cvw - 2 * n.x) / cvw * Math.tan(ang_view.x / 2 * Math.PI / 180)) * 180 / Math.PI) * 1.0;
+                myposition.pitch = (120 + Math.atan((cvh - 2 * n.y) / cvh * Math.tan(ang_view.y / 2 * Math.PI / 180)) * 180 / Math.PI) * 1.0;
+                myposition.roll = (30 * Math.atan((cvw - 2 * n.x) / cvw * Math.tan(ang_view.z / 2 * Math.PI / 180)) * 180 / Math.PI) * 1.0;                
+
+                // $("#data_show_roll").text("R "+ myposition.roll.toFixed(2) + " " + ear_l.score.toFixed(2) + " " + ear_r.score.toFixed(2) + " " + f2.toFixed(2));
+                // $("#data_show_pitch").text("P "+ myposition.pitch.toFixed(2) + " " + eye_l.score.toFixed(2) + " " + eye_r.score.toFixed(2));
+                // $("#data_show_yaw").text("Y "+ myposition.yaw.toFixed(2) + " " + score_face.toFixed(2));
+
+                // console.log(myposition.roll.toFixed(2), " ", myposition.pitch.toFixed(2), " ", myposition.yaw.toFixed(2));
+
+                if (bTimeOut) {
+                    window.location.reload();
+                    return;
+                }
+            }
+
+            var servo_y, servo_p;
+            var s_yaw, s_pitch;
+            var yaw0 = 0, pitch0 = 0;
+            var mode = 1;
+            var detect_pose = false;
+            var smp = new Object();
+            var max_dps = 300;
+            var min_dps = 30;
+            var lpf_a = 0.5;
+
+            function constrain(amt, low, high) {
+                return (amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt));
+            };
+
+            function diffAngle(ang, crt) {
+                console.log(ang);
+                var ang_d = ang - crt;
+                while (ang_d < 0 || ang_d > 360) {
+                    if (ang_d < 0) {
+                        ang_d += 360;
+                    }
+                    else if (ang_d > 360) {
+                        ang_d -= 360;
+                    }
+                }
+                return ang_d;
+            }
+
+            function setServo(yaw, pitch) {
+                try {
+                    servo_y.angle(yaw);
+                    s_yaw = yaw;
+                    servo_p.angle(pitch);
+                    s_pitch = pitch;
+                    $('#d4').html("SERVO: " + s_yaw.toFixed(2) + ", " + s_pitch.toFixed(2));
+                }
+                catch (e) {
+                    //console.error(e);
+                    return;
+                }
+            }
+
+            function moveServoToward(yaw, pitch, max_deg, min_deg) {
+                yaw = lpf_a * s_yaw + (1 - lpf_a) * yaw;
+                pitch = lpf_a * s_pitch + (1 - lpf_a) * pitch;
+                //console.log(yaw);
+                //console.log(pitch);
+                setServo(yaw, pitch);
+            }
+
+            function startServo(src, interval) {
+                updateServo = setInterval(function () {
+                    // console.dir(src);
+                    max_deg = max_dps * (interval / 1000);
+                    min_deg = min_dps * (interval / 1000);
+                    moveServoToward(src.yaw, src.pitch, max_deg, min_deg);
+                }, interval);
+                $('#d1').html("RUNNING");
+            }
+
+            function stopServo() {
+                if (typeof updateServo !== "undefined") {
+                clearInterval(updateServo);
+                }
+                $('#d1').html("STOP");
+            }
+
+            function startProcess() {
+            // $(document).ready(function () {
+                document.getElementById("start-button").style.display = "none";
+                $(".view-contents-mode1").hide();
+                $(".view-contents-mode2").hide();
+                $(".view-contents-mode3").hide();
+                $(function () {
+                    var mode = '1';
+                    $('#view-mode').html('MODE' + mode + ': ' + $('[name=select-mode] option:selected').text());
+                    stopServo();
+                    detect_pose = false;
+                    $(".view-contents-mode1").hide();
+                    $(".view-contents-mode2").hide();
+                    $(".view-contents-mode3").hide();
+                    switch (mode) {
+                        case "1":
+                            $(".view-contents-mode3").show();
+                            detect_pose = true;
+                            bindPage();
+                            startServo(myposition, 100);
+                            break;
+                    }
+                });
+            // });
+            }
+
+            function restartProcess() {
+                moveHeadToDownward = false;
+                moveHeadToUpward = false;
+                moveHeadToLeft =  false;
+                moveHeadToRight = false;
+                moveHeadToCenter = false;
+
+                score = 0;
+                mypose = new Object();
+                myposition = new Object();
+                cvw = canvas.width;
+                cvh = canvas.height;
+                ang_view = { //angle of view of webcam. for mode 3
+                    x: 60, y: 60, z:60
+                };
+                $(".view-contents-mode1").hide();
+                $(".view-contents-mode2").hide();
+                $(".view-contents-mode3").hide();
+                $(function () {
+                    var mode = '1';
+                    $('#view-mode').html('MODE' + mode + ': ' + $('[name=select-mode] option:selected').text());
+                    stopServo();
+                    detect_pose = false;
+                    $(".view-contents-mode1").hide();
+                    $(".view-contents-mode2").hide();
+                    $(".view-contents-mode3").hide();
+                    switch (mode) {
+                        case "1":
+                            $(".view-contents-mode3").show();
+                            detect_pose = true;
+                            bindPage();
+                            startServo(myposition, 100);
+                            break;
+                    }
+                });
+            }
+
+            const setupPage = async () => {
+                // await tf.setBackend(state.backend);
+                await setupCamera();
+                video.play();
+
+                videoWidth = video.videoWidth;
+                videoHeight = video.videoHeight;
+                video.width = videoWidth;
+                video.height = videoHeight;
+
+                canvas = document.getElementById('output');
+                canvas.width = videoWidth;
+                canvas.height = videoHeight;
+                ctxCanvas = canvas.getContext('2d');
+                ctxCanvas.fillStyle = "rgba(255, 0, 0, 0.5)";
+                model = await blazeface.load();
+                smile_model = await tf.loadLayersModel('model/model.json');
+                renderPrediction();
+            };
+            setupPage();
+        </script>
+        <script>
+            var sHTML = ``;
+
+            function registerReg() {
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("start-button").style.display = "none";
+                document.getElementById("first-timer").style.display = "block";
+            }
+
+            function register() {
+                sHTML = `
+                    <div>
+                        <p id="input-blank" style="z-index:300;width:100%;background-color:black;color:white;position:fixed;font-size:12px;font-weight:500;left:0px;bottom:12px;line-height:32px;padding-left:20px;">
+                            Enter your name below.
+                        </p>
+                        <p>
+                            <input type="text" id="subjectName" placeholder="Type your name here." value="" style="z-index:99;width:100%;background-color:black;color:white;position:fixed;font-size:20px;font-weight:700;left:0px;bottom:-5px;line-height:46px;padding-left:20px;">
+                        </p>
+                    </div>
+                    <div>
+                        <a style="background-color:black;" href="#" id="clickHref" onclick="alertus()">
+                            <img src="https://probe1.tuturulianda.com/flaticon/tick.png" width="44px" height="44px" style="z-index:313;position:fixed;bottom:10px;right:20px;" alt="">
+                        </a>
+                    </div>
+                    <div>
+                        <a href="#" onclick="resetBack()">                
+                            <img src="https://probe1.tuturulianda.com/flaticon/left.png" width="44px" height="44px" style="z-index:312;position:fixed;top:20px;left:20px;border-radius:10px;color:rgb(0,0,0,0.6);display:block;" alt="">
+                        </a>
+                    </div>`;                
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("start-button").style.display = "none";
+                document.getElementById("first-timer").style.display = "none";
+                document.getElementById("message-bubble").innerHTML = "Position your head and shoulders to fill up the whole screen after entering your name below.";
+                document.getElementById("message-bubble").style.display = "block";
+                document.getElementById("match").style.display = "block";
+                document.getElementById("match").innerHTML = sHTML;
+            }
+
+            function resetBack() {
+                window.location.reload();
+            }
+
+            function alertus() {
+                if (!whenIsNotEmpty(document.getElementById("subjectName"))) {
+                    document.getElementById("subjectName").value = null;
+                    document.getElementById("subjectName").focus();
+                    return false;
+                }
+
+                document.getElementById("spinner").style.display = "block";
+                let subjectName = String(document.getElementById("subjectName").value).trim();
+                const data = canvas.toDataURL("image/png");
+
+                var img = new Image;
+                img.onload = resizeImage;
+                img.src = data;
+
+                function resizeImage() {
+                    var targetWidth = 300;
+                    var targetHeight = 400;
+                    var picData = imageToDataUri(this, targetWidth, targetHeight);
+                    var picLoadedData = picData.replace("data:image/png;base64,", "");
+                    addSubjectName(subjectName);
+                    addSubjectBase64(subjectName, picLoadedData);
+                    document.getElementById("spinner").style.display = "none";
+                    swal("Face registration was successful. Now, try to validate the access.");
+                    window.location.reload();
+                }
+                return true;
+            }
+
+
+            function htmlEntities(str) {
+                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+
+            function escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+            }
+
+            function replaceAll(str, find, replace) {
+                return str.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+            }
+
+            function whenIsNotEmpty(field) {
+                if ((field.value == '') || (field.value == null)) {
+                    field.focus(); // <----add this to focus
+                    swal("Please fill in the subject name. Do not leave it blank.");
+                    field.focus(); // <----add this to focus
+                    return false; // <-----move this in case of blank field only.
+                }
+                return true;
+            }
+
+            function imageToDataUri(img, width, height, quality) {
+                var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                return canvas.toDataURL('image/png');
+            }
+
+            function contrastImage(imageData, contrast) {  // contrast as an integer percent
+                var data = imageData.data;  // original array modified, but canvas not updated
+                contrast *= 2.55; // or *= 255 / 100; scale integer percent to full range
+                var factor = (255 + contrast) / (255.01 - contrast);  //add .1 to avoid /0 error
+                for(var i=0;i<data.length;i+=4)  //pixel values in 4-byte blocks (r,g,b,a)
+                {
+                    data[i] = factor * (data[i] - 128) + 128;     //r value
+                    data[i+1] = factor * (data[i+1] - 128) + 128; //g value
+                    data[i+2] = factor * (data[i+2] - 128) + 128; //b value
+                }
+                return imageData;  //optional (e.g. for filter function chaining)
+            }
+
+            function getBase64Image(img) {
+                var canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                var ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                var dataURL = canvas.toDataURL("image/png");
+                return dataURL.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
+            }            
+
+            function webcamRecognizeImage(picLoadedData) {
+                document.getElementById("spinner").style.display = "block";
+                $(document).ajaxStop(function(){
+                    beginProcess = false;
+                });
+                if (beginProcess) {
+                    beginProcess = false;
+                    var result = "";
+                    var settings = {
+                        "url": "https://vault.tuturulianda.com/api/v1/recognition/recognize?limit=0&face_plugins=age,pose",
+                        "method": "POST",
+                        // "timeout": 60000,
+                        "headers": {
+                            "Content-Type": "application/json",
+                            "x-api-key": "c86b70e0-ba3c-44f3-823e-dd848b02ad24"
+                        },
+                        "data": JSON.stringify({
+                            "file": picLoadedData
+                        }),
+                    };                    
+
+                    $.ajax(settings).done(function (result) {
+                        var data = JSON.stringify(result);
+                        console.log(data);
+                        const jsonData = JSON.parse(data);
+                        const subjectName = String(jsonData.result[0].subjects[0].subject).trim();
+                        const similarity = parseFloat(jsonData.result[0].subjects[0].similarity);
+                        if ((subjectName !== "") && (subjectName !== "undefined") && (subjectName !== "null") && (similarity.toFixed(2) >= 0.95)) {
+                            var ret = "";
+                            ret = subjectName;
+                            sHTML = `
+                                <div>
+                                    <p id="input-blank" style="z-index:100;width:100%;background-color:black;color:white;position:fixed;font-size:12px;font-weight:500;left:0px;bottom:12px;line-height:32px;padding-left:20px;">
+                                        Are&nbsp;you
+                                    </p>        
+                                    <p id="subjectName" style="z-index:99;width:100%;background-color:black;color:white;position:fixed;font-size:20px;font-weight:700;left:0px;bottom:-19px;line-height:46px;padding-left:20px;">
+                                        ` + subjectName + `
+                                    </p>
+                                </div>
+                                <div>
+                                    <a style="background-color:black;" href="https://tuturulianda.com">
+                                        <img src="https://probe1.tuturulianda.com/flaticon/tick.png" width="44px" height="44px" style="z-index:113;position:fixed;bottom:10px;right:20px;" alt="">
+                                    </a>
+                                </div>
+                                <div>
+                                    <a href="#" onclick="resetBack()">
+                                        <img src="https://probe1.tuturulianda.com/flaticon/left.png" width="44px" height="44px" style="z-index:112;position:fixed;top:20px;left:20px;border-radius:10px;color:rgb(0,0,0,0.6);" alt="">
+                                    </a>
+                                </div>`;
+                            document.getElementById("match").innerHTML = sHTML;
+                            document.getElementById("match").style.display = "block";
+                            document.getElementById("start-button").style.display = "none";
+                            document.getElementById("spinner").style.display = "none";
+                            document.getElementById("message-bubble").innerHTML = "";
+                            document.getElementById("message-bubble").style.display = "none";
+                            // }
+                        }
+                        else {
+                            var ret = "";
+                            swal("Unauthorized Access");
+                            window.location.reload();
+                            return;
+                            // sHTML = `
+                            //     <div>
+                            //         <p id="input-blank" style="z-index:100;width:100%;background-color:black;color:white;position:fixed;font-size:12px;font-weight:500;left:0px;bottom:12px;line-height:32px;padding-left:20px;">
+                            //             Enter your name below.
+                            //         </p>
+                            //         <p>
+                            //             <input type="text" id="subjectName" placeholder="Type your name here." value="" style="z-index:99;width:100%;background-color:black;color:white;position:fixed;font-size:20px;font-weight:700;left:0px;bottom:-5px;line-height:46px;padding-left:20px;">
+                            //         </p>
+                            //     </div>
+                            //     <div>
+                            //         <a href="#" id="clickHref" onclick="alertus()">
+                            //             <img src="https://probe1.tuturulianda.com/flaticon/tick.png" width="44px" height="44px" style="z-index:113;position:fixed;bottom:10px;right:20px;" alt="">
+                            //         </a>
+                            //     </div>
+                            //     <div>
+                            //         <a href="#" onclick="resetBack()">
+                            //             <img src="https://probe1.tuturulianda.com/flaticon/left.png" width="44px" height="44px" style="z-index:112;position:fixed;top:20px;left:20px;border-radius:10px;color:rgb(0,0,0,0.6);" alt="">
+                            //         </a>
+                            //     </div>`;
+                            // document.getElementById("message-bubble").innerHTML = "Position your head and shoulders to fill up the whole screen after entering your name below.";
+                            // document.getElementById("message-bubble").style.display = "block";
+                            // document.getElementById("match").innerHTML = sHTML;
+                            // document.getElementById("match").style.display = "block";
+                            // document.getElementById("start-button").style.display = "none";
+                            // document.getElementById("spinner").style.display = "none";
+                        }
+                        // }
+                    })
+                    .fail(function(result){
+                        var data = JSON.stringify(result);
+                        console.log("Failed: ", data);
+                        // ret = 'No face is found in the given image.';
+                        var ret = data;
+                        document.getElementById("spinner").style.display = "none";
+                    });
+                }
+            }
+
+
+            function addSubjectName(subjectName) {
+                document.getElementById("spinner").style.display = "block";
+                var subjectName = subjectName.trim();
+                var personName = htmlEntities(String(subjectName));
+                console.log(personName);
+                $(document).ajaxStop(function(){
+                });
+                // swal(personName);
+                var result = null;
+                var settings = {
+                    "url": "https://vault.tuturulianda.com/api/v1/recognition/subjects",
+                    "method": "POST",
+                    // "timeout": 60000,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "x-api-key": "c86b70e0-ba3c-44f3-823e-dd848b02ad24"
+                    },
+                    "data": JSON.stringify({
+                        "subject": personName
+                    }),
+                };
+
+                $.ajax(settings).done(function (result) {
+                    console.log(result);
+                    var data = JSON.stringify(result);
+                    // swal(data);
+                    console.log(data);
+                    const jsonData = JSON.parse(data);
+                    document.getElementById("spinner").style.display = "none";
+                });
+
+            }
+
+
+            function addSubjectBase64(subjectName, picData) {
+                document.getElementById("spinner").style.display = "none";
+                var subjectName = subjectName.trim();
+                var personName = htmlEntities(String(subjectName));
+                $(document).ajaxStop(function(){
+                });
+                var result = null;
+                var settings = {
+                    "url": "https://vault.tuturulianda.com/api/v1/recognition/faces?subject=" + personName + "&det_prob_threshold=0.9",
+                    "method": "POST",
+                    // "timeout": 60000,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "x-api-key": "c86b70e0-ba3c-44f3-823e-dd848b02ad24"
+                    },
+                    "data": JSON.stringify({
+                        "file": picData
+                    }),
+                };
+
+                $.ajax(settings).done(function(result) {
+                    data = JSON.stringify(result);
+                    // swal(data);
+                    const jsonData = JSON.parse(data);
+                    console.log(jsonData);
+                    document.getElementById("spinner").style.display = "none";
+                    const sleepNow = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+                    async function repeatedGreetingsLoop() {
+                        for (let i = 1; i <= 3; i++) {
+                            await sleepNow(1000);
+                            console.log(`Wait #${i}`);
+                        }
+                    }
+                    repeatedGreetingsLoop();
+                });
+                document.getElementById("spinner").style.display = "none";
+            }
+            
+            function speak (msg) {
+                // var msg = new SpeechSynthesisUtterance(message)
+                // var voices = window.speechSynthesis.getVoices()
+                // msg.voice = voices[10]
+                // window.speechSynthesis.speak(msg)
+
+                const message = new SpeechSynthesisUtterance(
+                    msg
+                );
+                message.lang = "en-US";
+
+                const voices = speechSynthesis
+                    .getVoices()
+                    .filter(voice => voice.lang === "en-US");
+                message.voice = voices[0];
+
+                speechSynthesis.speak(message);
+            }
+
+            function dummy() {
+                const subjectName = "Tutu Rulianda";
+                sHTML = `
+                    <div>
+                        <p id="input-blank" style="z-index:100;width:100%;background-color:black;color:white;position:fixed;font-size:12px;font-weight:500;left:0px;bottom:12px;line-height:32px;padding-left:20px;">
+                            Are&nbsp;you
+                        </p>        
+                        <p id="subjectName" style="z-index:99;width:100%;background-color:black;color:white;position:fixed;font-size:20px;font-weight:700;left:0px;bottom:-19px;line-height:46px;padding-left:20px;">
+                            ` + subjectName + `
+                        </p>
+                    </div>
+                    <div>
+                        <a style="background-color:black;" href="https://tuturulianda.com">
+                            <img src="https://probe1.tuturulianda.com/flaticon/tick.png" width="44px" height="44px" style="z-index:113;position:fixed;bottom:10px;right:20px;" alt="">
+                        </a>
+                    </div>
+                    <div>
+                        <a href="#" onclick="resetBack()">
+                            <img src="https://probe1.tuturulianda.com/flaticon/left.png" width="44px" height="44px" style="z-index:112;position:fixed;top:20px;left:20px;border-radius:10px;color:rgb(0,0,0,0.6);" alt="">
+                        </a>
+                    </div>`;
+                // alert(subjectName);
+                document.getElementById("match").innerHTML = sHTML;
+                document.getElementById("match").style.display = "block";
+                document.getElementById("start-button").style.display = "none";
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("message-bubble").innerHTML = "";
+                document.getElementById("message-bubble").style.display = "none";
+            }
+
+        </script>
+    </body>          
+</html>

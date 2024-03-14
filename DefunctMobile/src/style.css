@@ -1,0 +1,40 @@
+body{
+    position:absolute;
+    top:0px;
+    margin:0;
+    padding:0;
+    width:100vw;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    overflow-y: hidden;
+    overflow-x: hidden;
+}
+canvas {
+    position:absolute;
+    z-index:10;
+    border-radius: 15px;
+    box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+}
+video {
+    z-index:9;
+    border-radius: 15px;
+    box-shadow: 4.0px 8.0px 8.0px rgba(0,0,0,0.38);
+}
+.loading {
+    z-index:-10;
+    position:absolute;
+    top:0px;
+    left:165px;
+    justify-content:center;
+    align-items:center;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    height: 100vh;
+}
+.loading>img {
+    animation: rotation 2s infinite linear;
+}
