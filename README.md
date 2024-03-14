@@ -1,5 +1,5 @@
 # CodeBox
-[CodeBox](https://codebox.tuturulianda.com) is a face biometrics suite web app based on JavaScript, and Exadel Compreface is the backend. A brief explanation of this project is stated as follows. Credit goes to Vincent Mühler for his brilliant face-api js.
+[CodeBox](https://codebox.tuturulianda.com) is a face biometrics suite web app based on JavaScript, and Exadel Compreface is the backend. Credit goes to Vincent Mühler for his brilliant face-api js. A brief explanation of this project is stated as follows.
 
 ![alt text](real-timeMultipleFaceRecognition.jpg "Real-Time Multiple Face Recognition")
 
