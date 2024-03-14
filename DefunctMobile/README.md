@@ -1,4 +1,4 @@
-# Webcam Demo
+# Webcam Streaming
 
 In this documentation we show how to use our detection service with webcamera. **NOTE:** we have chosen reactjs as it is today's one of the most popular UI library.
 
