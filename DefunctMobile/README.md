@@ -5,7 +5,7 @@ In this documentation we show how to use our detection service with webcamera. *
 1. Clone our repository
 2. Enter to ```webcam_demo``` folder and install packages
 
-``` cd webcam_demo```
+``` cd DefunctMobile```
 
 ```npm install```
 
